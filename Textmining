@@ -1,0 +1,160 @@
+#Getting the current  Working Directory
+getwd()
+#Installing tm packing for transformation purpose 
+install.packages("http://cran.r-project.org/bin/windows/contrib/3.0/tm_0.5-10.zip",repos=NULL)
+#importing tm package
+library(tm)
+#library(tmap)
+#SnowballC is a package used for stemming purpose
+library(SnowballC)
+#Create Corpus
+#Setting working directory
+setwd("C:/Users/Sourabh/Documents/")
+#TextMining is a folder which contains 30 txt files for mining
+docs <- Corpus(DirSource("TextMining"))
+#displaying the content of corpus
+docs
+
+#summary of corpus details of every document
+summary(docs)
+
+#Displaying data of first document in TextMining folder
+writeLines(as.character(docs[[1]]))
+
+#Number of types of available transformation
+getTransformations()
+
+#create the toSpace content transformer
+toSpace <- content_transformer(function(x, pattern) {return (gsub(pattern, " ", x))})
+
+toSpace
+#Replacing hyphen - by " "
+docs <- tm_map(docs, toSpace, "-")
+#Replacing colon : by " "
+docs <- tm_map(docs, toSpace, ":")
+
+#Remove punctuation – replace punctuation marks with ” “
+docs <- tm_map(docs, removePunctuation)
+
+
+docs <- tm_map(docs, toSpace, "'")
+docs <- tm_map(docs, toSpace, "'")
+#Replacing " "-(hyphen) by " " i.e. removing space followed by - by only space
+docs <- tm_map(docs, toSpace, " -")
+
+
+#Transform to lower case (need to wrap in content_transformer)
+docs <- tm_map(docs,content_transformer(tolower))
+
+#Strip digits (std transformation, so no need for content_transformer)
+docs <- tm_map(docs, removeNumbers)
+
+#remove stopwords using the standard list in tm
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+
+#Strip whitespace 
+docs <- tm_map(docs, stripWhitespace)
+
+
+#load library
+#library(SnowballC)
+#Stem document
+docs <- tm_map(docs,stemDocument)
+writeLines(as.character(docs[[30]]))
+
+
+docs <- tm_map(docs, content_transformer(gsub), pattern = "organiz", replacement = "organ")
+docs <- tm_map(docs, content_transformer(gsub), pattern = "organis", replacement = "organ")
+docs <- tm_map(docs, content_transformer(gsub), pattern = "andgovern", replacement = "govern")
+docs <- tm_map(docs, content_transformer(gsub), pattern = "inenterpris", replacement = "enterpris")
+docs <- tm_map(docs, content_transformer(gsub), pattern = "team-", replacement = "team")
+
+
+#Creating Matrix for finding the frequencies of word in a document 
+dtm <- DocumentTermMatrix(docs)
+
+#summary of matrix
+dtm
+
+
+#
+inspect(dtm[1:2,1000:1005])
+
+
+#frequency of each word in corpus
+freq <- colSums(as.matrix(dtm))
+
+#freq
+
+#length should be total number of terms
+length(freq)
+
+
+#create sort order (descending)
+ord <- order(freq,decreasing=TRUE)
+
+
+#inspect most frequently occurring terms
+freq[head(ord)]
+
+
+#inspect least frequently occurring terms
+freq[tail(ord)] 
+
+
+dtmr <-DocumentTermMatrix(docs, control=list(wordLengths=c(4, 20),
+                                             bounds = list(global = c(3,27))))
+
+#after filteration
+dtmr
+
+
+freqr <- colSums(as.matrix(dtmr))
+#length should be total number of terms
+length(freqr)
+
+
+#create sort order (asc)
+ordr <- order(freqr,decreasing=TRUE)
+#inspect most frequently occurring terms
+freqr[head(ordr)]
+
+
+#inspect least frequently occurring terms
+freqr[tail(ordr)]
+
+#finding the terms frequency equal to 80
+findFreqTerms(dtmr,lowfreq=80)
+
+
+findAssocs(dtmr,"project",0.6)
+
+
+findAssocs(dtmr,"enterpris",0.6)
+
+
+findAssocs(dtmr,"system",0.6)
+
+
+
+wf=data.frame(term=names(freqr),occurrences=freqr)
+#wf
+library(ggplot2)
+p <- ggplot(subset(wf, freqr>100), aes(term, occurrences))
+p <- p + geom_bar(stat="identity")
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))
+p
+
+
+#wordcloud
+library(wordcloud)
+#setting the same seed each time ensures consistent look across clouds
+set.seed(42)
+#limit words by specifying min frequency
+wordcloud(names(freqr),freqr, min.freq=70)
+
+
+
+#…add color
+wordcloud(names(freqr),freqr,min.freq=70,colors=brewer.pal(6,"Dark2"))
